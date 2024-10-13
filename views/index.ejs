@@ -3,16 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hover Sidebar</title>
+  <title>Recipe Cards</title>
   <link rel="stylesheet" href="/styles.css">
-
 </head>
 <body>
   <%- include('partials/navbar') %>
   <div class="main-content">
-    <h1>Welcome to My Node.js Application</h1>
-    <p>This is your main content area. Hover over the left side to open the sidebar.</p>
+    <h1>Featured recipes</h1>
+    <div class="recipe-grid" id="recipeGrid">
+      <% if (recipes && recipes.length > 0) { %>
+        <% recipes.forEach(function(recipe) { %>
+          <div class="recipe-card">
+            <img src="<%= recipe.image %>" alt="<%= recipe.title %>" style="max-width: 100%; height: auto;">
+            <div class="card-content">
+              <h3 class="recipe-title"><%= recipe.title %></h3>
+            </div>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <p>No recipes available.</p>
+      <% } %>
+    </div>
   </div>
-
 </body>
 </html>
