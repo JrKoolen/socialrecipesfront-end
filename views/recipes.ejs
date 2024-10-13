@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recipe Cards</title>
+  <!-- Link to external CSS file -->
+  <link rel="stylesheet" href="/styles.css">
+
+</head>
+<body>
+  <%- include('partials/navbar') %>
+  <!-- Main content area -->
+  <div class="main-content">
+    <h1>Delicious Recipes</h1>
+
+    <!-- Search bar -->
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Search for recipes...">
+    </div>
+
+<!-- Container for the recipe cards -->
+<div class="recipe-grid" id="recipeGrid">
+  <% recipes.forEach(function(recipe) { %>
+    <div class="recipe-card">
+      <img src="<%= recipe.image %>" alt="<%= recipe.title %>">
+      <div class="card-content">
+        <h3 class="recipe-title"><%= recipe.title %></h3>
+        <p class="recipe-description">
+          <%= recipe.description ? recipe.description : 'No description available' %>
+        </p>
+      </div>
+    </div>
+  <% }) %>
+</div>
+
+
+  <script>
+    // Search functionality
+    const searchInput = document.getElementById('searchInput');
+    const recipeCards = document.querySelectorAll('.recipe-card');
+
+    searchInput.addEventListener('keyup', function() {
+      const searchValue = searchInput.value.toLowerCase();
+      
+      recipeCards.forEach(card => {
+        const title = card.querySelector('.recipe-title').textContent.toLowerCase();
+        const description = card.querySelector('.recipe-description').textContent.toLowerCase();
+
+        // If the title or description includes the search value, show the card, otherwise hide it
+        if (title.includes(searchValue) || description.includes(searchValue)) {
+          card.style.display = 'block';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>
