@@ -14,9 +14,10 @@
       <% if (recipes && recipes.length > 0) { %>
         <% recipes.forEach(function(recipe) { %>
           <div class="recipe-card">
-            <img src="<%= recipe.image %>" alt="<%= recipe.title %>" style="max-width: 100%; height: auto;">
+            <img src="data:image/jpeg;base64,<%= recipe.imageBase64 %>" alt="<%= recipe.title %>" style="max-width: 100%; height: auto;">
             <div class="card-content">
               <h3 class="recipe-title"><%= recipe.title %></h3>
+              <%= recipe.description ? recipe.description : 'No description available' %>
             </div>
           </div>
         <% }) %>

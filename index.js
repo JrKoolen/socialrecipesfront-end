@@ -55,6 +55,23 @@ app.get('/confirm-account', (req, res) => {
   res.render('confirm-account', { activePage: 'confirm-account' });
 });
 
+app.get('/recipe/:id', async (req, res) => {
+  const recipeId = req.params.id;
+  console.log("Trying to get recipe with id: " + recipeId);
+  try {
+    const response = await axios.get(`http://localhost:3000/api/recipes/${recipeId}`);
+    const recipe = response.data;
+    if (recipe) {
+      res.render('recipe', { recipe, activePage: 'recipe' });
+    } else {
+      res.status(404).send('Recipe not found');
+    }
+  } catch (error) {
+    console.error('Error fetching recipe:', error);
+    res.status(500).send('Failed to fetch recipe.');
+  }
+});
+
 app.listen(3000, () => {
   console.log('Server running on http://localhost:3000');
 });
