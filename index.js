@@ -10,7 +10,6 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/assets', express.static('assets'));
 
-// Use the apiRouter for API routes under /api
 app.use('/api', apiRouter);
 
 app.get('/', async (req, res) => {
