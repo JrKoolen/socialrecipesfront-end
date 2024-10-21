@@ -11,10 +11,25 @@
 
   <div class="main-content">
     <h1><%= recipe.title %></h1>
-    <% if (recipe.image) { %>
-      <img src="<%= recipe.image %>" alt="<%= recipe.title %>" style="max-width: 100%; height: auto;">
+
+    <% if (recipe.imageBase64) { %>
+      <div class="centered-image-container">
+      <img src="data:image/jpeg;base64,<%= recipe.imageBase64 %>" alt="<%= recipe.title %>">
+    </div>
     <% } %>
-    <p><%= recipe.description %></p>
+
+    <% if (recipe.description) { %>
+      <div class="description-box">
+        <p><%= recipe.description %></p>
+      </div>
+    <% } %>
+
+    <% if (recipe.body) { %>
+      <div class="body-box">
+        <%- recipe.body %>  
+      </div>
+    <% } %>
+    
     <button>Like</button>
   </div>
 </body>

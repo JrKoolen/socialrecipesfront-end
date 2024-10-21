@@ -3,6 +3,8 @@ const axios = require('axios');
 const https = require('https');
 const router = express.Router();
 
+const marked = require('marked');
+
 const httpsAgent = new https.Agent({
   rejectUnauthorized: false,
 });
@@ -16,13 +18,13 @@ router.get('/recipes', async (req, res) => {
     if (data && Array.isArray(data.recipes)) {
       const recipes = data.recipes.map(recipe => {
         if (recipe.image) {
-          console.log('Original image data type:', typeof recipe.image);
-          console.log('Original image data length:', recipe.image.length);
+          //console.log('Original image data type:', typeof recipe.image);
+          //console.log('Original image data length:', recipe.image.length);
           
           const base64Image = Buffer.from(recipe.image, 'binary').toString('base64');
           recipe.image = `data:image/jpeg;base64,${base64Image}`;
           
-          console.log('Base64 image data length:', base64Image.length);
+          //console.log('Base64 image data length:', base64Image.length);
         }
         return recipe;
       });
@@ -38,17 +40,33 @@ router.get('/recipes', async (req, res) => {
   }
 });
 
+
 router.get('/recipes/:id', async (req, res) => {
   const recipeId = req.params.id;
   try {
     const response = await axios.get(`https://localhost:7259/Recipe/GetRecipeById/${recipeId}`, { httpsAgent });
     const recipe = response.data;
+    //console.log('Recipe:', recipe.recipe.body);
 
+    //console.log('Image:', response.data.recipe.body);
+    //console.log('Recipe:', recipe.body);
     if (recipe) {
-      if (recipe.image) {
-        const base64Image = Buffer.from(recipe.image, 'binary').toString('base64');
-        recipe.image = `data:image/jpeg;base64,${base64Image}`;
+      if (recipe.recipe.imageBase64) {
+        //const base64Image = Buffer.from(recipe.recipe.imageBase64, 'binary').toString('base64');
+        //recipe.recipe.imageBase64 = `data:image/jpeg;base64,${base64Image}`;
+      } else {
+        console.log(`No image available for this recipe. ID: ${recipeId}`);
       }
+
+      if (recipe.recipe.body) {
+        //console.log('Body before conversion:', recipe.recipe.body);  
+        recipe.recipe.body = marked.parse(recipe.recipe.body);
+        //console.log('Markdown converted to HTML:', recipe.recipe.body);  
+      } else {
+        recipe.body = '<p>No description or instructions available for this recipe.</p>';
+        console.log(`No body available for this recipe. ID: ${recipeId}`);
+      }
+
       res.json(recipe);
     } else {
       res.status(404).json({ error: 'Recipe not found' });
