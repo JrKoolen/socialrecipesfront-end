@@ -77,4 +77,38 @@ router.get('/recipes/:id', async (req, res) => {
   }
 });
 
+router.post('/auth/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const response = await axios.post(
+      'https://localhost:7259/Auth/login',
+      { username: email, password },
+      { httpsAgent }
+    );
+
+    const { token } = response.data;
+
+    if (token) {
+      req.session.jwtToken = token; 
+      return res.redirect('/dashboard'); 
+    } else {
+      return res.render('login', { errorMessage: 'Invalid username or password' });
+    }
+  } catch (error) {
+    console.error('Error logging in:', error.message);
+    return res.render('login', { errorMessage: 'Login failed. Please try again.' });
+  }
+});
+
+
+router.post('/auth/logout', (req, res) => {
+  req.session.destroy(err => {
+    if (err) {
+      return res.status(500).json({ error: 'Failed to log out' });
+    }
+    res.json({ message: 'Logout successful' });
+  });
+});
+
 module.exports = router;
