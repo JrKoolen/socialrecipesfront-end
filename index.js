@@ -193,7 +193,6 @@ app.post('/create-recipe', upload.single('image'), async (req, res) => {
   const { title, body, description } = req.body;
   const userId = req.session.user ? req.session.user.id : null;
 
-  // Build the payload within a recipeDto wrapper
   const payload = {
     recipeDto: {
       title,
@@ -204,7 +203,6 @@ app.post('/create-recipe', upload.single('image'), async (req, res) => {
     }
   };
 
-  // If an image file is uploaded, read and encode it as Base64
   if (req.file) {
     const fs = require('fs');
     try {
@@ -212,17 +210,16 @@ app.post('/create-recipe', upload.single('image'), async (req, res) => {
       if (imageBase64.startsWith("data:image")) {
         imageBase64 = imageBase64.split(",")[1];
       }
-      payload.recipeDto.image = imageBase64; // Include image in recipeDto
+      payload.recipeDto.image = imageBase64; 
     } catch (error) {
       console.error("Error reading image file:", error.message);
       return res.render('create-recipe', { errorMessage: 'Error processing image. Please try again.' });
     }
   }
 
-  console.log('Data sent to the API:', JSON.stringify(payload, null, 2)); // Log payload for debugging
+  console.log('Data sent to the API:', JSON.stringify(payload, null, 2)); 
 
   try {
-    // Custom HTTPS agent to allow self-signed certificates
     const agent = new https.Agent({ rejectUnauthorized: false });
 
     const response = await axios.post(
@@ -233,7 +230,7 @@ app.post('/create-recipe', upload.single('image'), async (req, res) => {
           Authorization: `Bearer ${req.session.user.token}`,
           'Content-Type': 'application/json'
         },
-        httpsAgent: agent // Attach the custom agent
+        httpsAgent: agent 
       }
     );
 
