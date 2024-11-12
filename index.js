@@ -1,10 +1,17 @@
 const express = require('express');
-const path = require('path');
-const axios = require('axios');
-const app = express();
-const https = require('https');
 const session = require('express-session');
+const multer = require('multer');
+const constants = require('./config/constants');
+const setLocals = require('./middleware/Locals');
+const upload = multer({ dest: 'uploads/' });
 const crypto = require('crypto');
+const marked = require('marked');
+const https = require('https');
+const axios = require('axios');
+const path = require('path');
+const fs = require('fs');
+const app = express();
+
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); 
@@ -14,7 +21,6 @@ app.set('views', path.join(__dirname, 'views'));
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/assets', express.static('assets'));
-
 
 app.use(session({
   secret: crypto.randomBytes(64).toString('hex'), 
@@ -27,69 +33,64 @@ app.use(session({
   }
 }));
 
+app.use(setLocals);
+
+function ensureAuthenticated(req, res, next) {
+  if (req.session.user && req.session.user.isLoggedIn) {
+    return next();
+  }
+  res.redirect('/login');
+}
+
 const httpsAgent = new https.Agent({
   rejectUnauthorized: false, 
 });
 
 app.get('/', async (req, res) => {
   try {
-    const response = await axios.get('https://localhost:7259/Recipe/GetAllRecipes', { httpsAgent });
-    
-    const recipes = response.data.recipes || []; 
-
-    if (Array.isArray(recipes)) {
-      res.render('index', { recipes, activePage: 'home' });
-    } else {
-      console.error('Error: Expected an array for recipes, received:', recipes);
-      res.render('index', { recipes: [], activePage: 'home' });
-    }
-  } catch (error) {
-    console.error('Error fetching recipes:', error);
-    res.render('index', { recipes: [], activePage: 'home' });
-  }
-});
-
-//Post recipe
-
-app.get('/recipes', async (req, res) => {
-  try {
-    const response = await axios.get('https://localhost:7259/Recipe/GetAllRecipes', { httpsAgent });
+    const response = await axios.get(constants.RECIPE.GET_ALL_RECIPES, { httpsAgent });
     const recipes = response.data.recipes || [];
+
     if (Array.isArray(recipes)) {
-      res.render('recipes', { recipes, activePage: 'recipes' });
+      res.render('index', { recipes });
     } else {
       console.error('Error: Expected an array for recipes, received:', recipes);
-      res.render('recipes', { recipes: [], activePage: 'recipes' });
+      res.render('index', { recipes: [] });
     }
   } catch (error) {
     console.error('Error fetching recipes:', error);
-    res.render('recipes', { recipes: [], activePage: 'recipes' });
+    res.render('index', { recipes: [] });
   }
 });
 
 
 app.get('/login', (req, res) => {
-  res.render('login', { activePage: 'login' });
+  res.render('login', { activePage: 'login', errorMessage: null, isLoggedIn: req.session.user && req.session.user.isLoggedIn  });
 });
 
 app.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+  const { username, password } = req.body;
 
   try {
     const response = await axios.post(
-      'https://localhost:7259/Auth/login',
-      { username: email, password },
+      constants.AUTH.LOGIN,
+      { username, password },
       { httpsAgent: new https.Agent({ rejectUnauthorized: false }) }
     );
 
     const { token } = response.data;
 
     if (token) {
-      req.session.user = { email, token };
-      console.log(`User ${email} logged in with token.`);
-      return res.redirect('/dashboard'); 
+      req.session.user = {
+        username,
+        token,
+        id : response.data.id,
+        isLoggedIn: true 
+      };
+      console.log(`User ${username} logged in with token.`);
+      return res.redirect('/user-page');
     } else {
-      res.render('login', { errorMessage: 'Invalid email or password' });
+      res.render('login', { errorMessage: 'Invalid username or password' });
     }
   } catch (error) {
     console.error('Error logging in:', error.message);
@@ -97,8 +98,19 @@ app.post('/login', async (req, res) => {
   }
 });
 
+app.get('/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.redirect('/user-page'); 
+    }
+    res.clearCookie('connect.sid');
+    res.redirect('/login');
+  });
+});
+
+
 app.get('/register', (req, res) => {
-  res.render('register', { activePage: 'register', errorMessage: null });
+  res.render('register', { errorMessage: null });
 });
 
 app.post('/register', async (req, res) => {
@@ -114,7 +126,7 @@ app.post('/register', async (req, res) => {
 
   try {
     const response = await axios.post(
-      'https://localhost:7259/Auth/register',
+      constants.AUTH.REGISTER,
       payload,
       { httpsAgent }
     );
@@ -123,44 +135,144 @@ app.post('/register', async (req, res) => {
       return res.redirect('/login'); 
     } else {
       res.render('register', {
-        activePage: 'register',
         errorMessage: 'Registration failed. Please try again.'
       });
     }
   } catch (error) {
     console.error('Error registering user:', error.response ? error.response.data : error.message);
     res.render('register', {
-      activePage: 'register',
       errorMessage: 'An error occurred during registration. Please try again.'
     });
   }
 });
 
-app.get('/user-page', (req, res) => {
-  res.render('user-page', { activePage: 'user-page' });
+app.get('/user-page', async (req, res) => {
+  if (!req.session.user || !req.session.user.token) {
+    return res.redirect('/login');
+  }
+
+  try {
+    const response = await axios.get(
+      constants.RECIPE.GET_ALL_RECIPES_FROM_USER(req.session.user.id), 
+      {
+        headers: {
+          Authorization: `Bearer ${req.session.user.token}`
+        },
+        httpsAgent: new https.Agent({ rejectUnauthorized: false })
+      }
+    );
+    
+    const recipes = Array.isArray(response.data.recipes) ? response.data.recipes : [];
+    console.log('Recipes:', recipes);
+    res.render('user-page', { recipes });
+  } catch (error) {
+    console.error('Error fetching recipes:', error.message);
+    res.render('user-page', { errorMessage: 'Failed to load recipes. Please try again.', recipes: [] });
+  }
 });
 
-app.get('/create-recipe', (req, res) => {
-  res.render('create-recipe', { activePage: 'create-recipe' });
+
+app.get('/recipes', async (req, res) => {
+  try {
+    const response = await axios.get(constants.RECIPE.GET_ALL_RECIPES, { httpsAgent });
+    const recipes = Array.isArray(response.data.recipes) ? response.data.recipes : [];
+    
+    res.render('recipes', { recipes });
+  } catch (error) {
+    console.error('Error fetching recipes:', error);
+    res.render('recipes', { recipes: [] });
+  }
+});
+
+
+app.get('/create-recipe', ensureAuthenticated, (req, res) => {
+  res.render('create-recipe');
+});
+
+app.post('/create-recipe', upload.single('image'), async (req, res) => {
+  const { title, body, description } = req.body;
+  const userId = req.session.user ? req.session.user.id : null;
+
+  // Build the payload within a recipeDto wrapper
+  const payload = {
+    recipeDto: {
+      title,
+      body,
+      description,
+      userId,
+      status: "private"
+    }
+  };
+
+  // If an image file is uploaded, read and encode it as Base64
+  if (req.file) {
+    const fs = require('fs');
+    try {
+      let imageBase64 = fs.readFileSync(req.file.path, { encoding: 'base64' });
+      if (imageBase64.startsWith("data:image")) {
+        imageBase64 = imageBase64.split(",")[1];
+      }
+      payload.recipeDto.image = imageBase64; // Include image in recipeDto
+    } catch (error) {
+      console.error("Error reading image file:", error.message);
+      return res.render('create-recipe', { errorMessage: 'Error processing image. Please try again.' });
+    }
+  }
+
+  console.log('Data sent to the API:', JSON.stringify(payload, null, 2)); // Log payload for debugging
+
+  try {
+    // Custom HTTPS agent to allow self-signed certificates
+    const agent = new https.Agent({ rejectUnauthorized: false });
+
+    const response = await axios.post(
+      constants.RECIPE.CREATE_RECIPE,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${req.session.user.token}`,
+          'Content-Type': 'application/json'
+        },
+        httpsAgent: agent // Attach the custom agent
+      }
+    );
+
+    if (response.status === 200) {
+      return res.redirect('/recipes');
+    } else {
+      res.render('create-recipe', {
+        errorMessage: 'Failed to create recipe. Please try again.'
+      });
+    }
+  } catch (error) {
+    console.error('Error creating recipe:', error.response ? error.response.data : error.message);
+    res.render('create-recipe', {
+      errorMessage: 'An error occurred during recipe creation. Please try again.'
+    });
+  } finally {
+    if (req.file) {
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error("Error deleting temp image file:", err.message);
+      });
+    }
+  }
 });
 
 app.get('/confirm-account', (req, res) => {
-  res.render('confirm-account', { activePage: 'confirm-account' });
+  res.render('confirm-account');
 });
-
-const marked = require('marked');
 
 app.get('/recipe/:id', async (req, res) => {
   const recipeId = req.params.id;
   try {
-    const response = await axios.get(`https://localhost:7259/Recipe/GetRecipeById/${recipeId}`, { httpsAgent });
+    const response = await axios.get(constants.RECIPE.GET_ALL_RECIPES_FROM_USER(req.session.id), { httpsAgent });
     const recipe = response.data.recipe;
 
     if (recipe) {
       if (recipe.body) {
         recipe.body = marked.parse(recipe.body);
       }
-      res.render('recipe', { recipe, activePage: 'recipe' });
+      res.render('recipe', { recipe, activePage: 'recipe', isLoggedIn: req.session.user && req.session.user.isLoggedIn  });
     } else {
       res.status(404).send('Recipe not found');
     }
@@ -169,7 +281,6 @@ app.get('/recipe/:id', async (req, res) => {
     res.status(500).send('Failed to fetch recipe.');
   }
 });
-
 
 app.listen(3000, () => {
   console.log('Server running on http://localhost:3000');
