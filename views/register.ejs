@@ -9,8 +9,8 @@
 <body>
     <%- include('partials/navbar') %>
     <div class="container">
-        <h1>Create Your Account</h1>
-        <form id="createAccountForm" action="/confirm-account.html">
+        <h1>Register</h1>
+        <form id="createAccountForm" action="/register" method="POST">
             <label for="username">Username:</label>
             <input type="text" id="username" name="username" required>
 
@@ -22,8 +22,7 @@
 
             <button type="submit">Create Account</button>
         </form>
-
-        <p>Already have an account? <a href="login">Go to Login</a></p>
+        <a href="/login">Go to Login</a>
     </div>
 </body>
 </html>
