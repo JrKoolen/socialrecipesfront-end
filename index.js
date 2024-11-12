@@ -1,8 +1,9 @@
+console.log('Current directory:', __dirname);
 const express = require('express');
 const session = require('express-session');
 const multer = require('multer');
 const constants = require('./config/constants');
-const setLocals = require('./middleware/Locals');
+const setLocals = require('./middleware/local');
 const upload = multer({ dest: 'uploads/' });
 const crypto = require('crypto');
 const marked = require('marked');
