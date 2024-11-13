@@ -14,10 +14,10 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3 
 
     - name: Set up Node.js
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@v3  
       with:
         node-version: 16  
 
@@ -27,8 +27,7 @@ jobs:
     - name: Start server
       run: npm start &
       env:
-        NODE_ENV: test
-        API_BASE_URL: https://localhost:7259
+        NODE_ENV: test  
 
     - name: Wait for server to be ready
       run: npx wait-on http://localhost:3000 
@@ -36,21 +35,21 @@ jobs:
     - name: Run Cypress tests
       uses: cypress-io/github-action@v2
       with:
-        browser: chrome  
+        browser: chrome
+        config-file: cypress.config.js 
       env:
         CYPRESS_baseUrl: http://localhost:3000  
-        API_BASE_URL: https://localhost:7259
 
     - name: Upload Cypress test artifacts
       if: failure()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v3  
       with:
         name: cypress-screenshots
         path: cypress/screenshots
 
     - name: Upload Cypress videos
       if: failure()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v3 
       with:
         name: cypress-videos
         path: cypress/videos
