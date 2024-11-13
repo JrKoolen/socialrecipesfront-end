@@ -1,4 +1,4 @@
-const BASE_URL = 'https://localhost:7259';
+const BASE_URL = 'https://localhost:8080';
 
 module.exports = {
   AUTH: {

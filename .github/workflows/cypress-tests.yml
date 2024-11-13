@@ -12,44 +12,56 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      api:
+        image: api:latest  
+        ports:
+          - 8080:8080  
+        options: >-
+          --health-cmd "curl --fail http://localhost:8080 || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 3
+
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3 
+      uses: actions/checkout@v3
 
     - name: Set up Node.js
-      uses: actions/setup-node@v3  
+      uses: actions/setup-node@v3
       with:
         node-version: 16  
 
     - name: Install dependencies
       run: npm install
 
-    - name: Start server
+    - name: Start frontend server
       run: npm start &
       env:
         NODE_ENV: test  
 
-    - name: Wait for server to be ready
-      run: npx wait-on http://localhost:3000 
+    - name: Wait for API and frontend to be ready
+      run: npx wait-on http://localhost:8080 && npx wait-on http://localhost:3000 
 
     - name: Run Cypress tests
       uses: cypress-io/github-action@v2
       with:
         browser: chrome
-        config-file: cypress.config.js 
+        config-file: cypress.config.js
       env:
         CYPRESS_baseUrl: http://localhost:3000  
+        API_BASE_URL: http://localhost:8080 
 
     - name: Upload Cypress test artifacts
       if: failure()
-      uses: actions/upload-artifact@v3  
+      uses: actions/upload-artifact@v3
       with:
         name: cypress-screenshots
         path: cypress/screenshots
 
     - name: Upload Cypress videos
       if: failure()
-      uses: actions/upload-artifact@v3 
+      uses: actions/upload-artifact@v3
       with:
         name: cypress-videos
         path: cypress/videos
